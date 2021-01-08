@@ -1,0 +1,10 @@
+git config --global user.name "daaselmo"
+git config --global user.emal "daaselmo@hcrp.usp.br" 
+
+#Iniciar o git
+ git init
+
+#Ver status
+ git status
+
+
