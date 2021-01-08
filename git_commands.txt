@@ -7,4 +7,11 @@ git config --global user.emal "daaselmo@hcrp.usp.br"
 #Ver status
  git status
 
+#Add files to project
+ add <file> <.extension> <.>
+
+#Pick files from the staged area
+ git commit -m "first commit"
+
+
 
