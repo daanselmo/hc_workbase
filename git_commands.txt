@@ -1,10 +1,10 @@
 git config --global user.name "daaselmo"
 git config --global user.emal "daaselmo@hcrp.usp.br" 
 
-#Iniciar o git
+#Start git
  git init
 
-#Ver status
+#See status
  git status
 
 #Add files to project
@@ -13,5 +13,8 @@ git config --global user.emal "daaselmo@hcrp.usp.br"
 #Pick files from the staged area
  git commit -m "first commit"
 
+#See alteration from the file
+ git diff | --staged
 
-
+#See all commited log
+  git log
