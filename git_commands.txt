@@ -18,3 +18,14 @@ git config --global user.emal "daaselmo@hcrp.usp.br"
 
 #See all commited log
   git log
+
+#Create branchies
+  git branch branch_name
+  git checkout branch_name
+
+#Merge files to Master. Obs: It must be in Master
+  git merge branch_name
+
+#Push files to Master
+  git push -u origen master
+
