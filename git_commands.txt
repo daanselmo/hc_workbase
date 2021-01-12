@@ -27,5 +27,6 @@ git config --global user.emal "daaselmo@hcrp.usp.br"
   git merge branch_name
 
 #Push files to Master
+  git remote add origin https://github.com/daanselmo/hc_workbase.git
   git push -u origen master
 
