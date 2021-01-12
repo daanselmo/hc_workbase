@@ -14,7 +14,7 @@ git config --global user.emal "daaselmo@hcrp.usp.br"
  git commit -m "first commit"
 
 #See alteration from the file
- git diff | --staged
+  git diff | --staged
 
 #See all commited log
   git log
