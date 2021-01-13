@@ -13,6 +13,9 @@ git config --global user.emal "daaselmo@hcrp.usp.br"
 #Pick files from the staged area
  git commit -m "first commit"
 
+#Remove from staged are(uncommit)
+ git rm --cached file_name
+
 #See alteration from the file
   git diff | --staged
 
