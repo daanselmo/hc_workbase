@@ -1,0 +1,11 @@
+procedure Tfrm_inventario_equipamentos.LiberarComponentes;
+var
+ i : Integer;
+begin
+   for I := 0 to frm_inventario_equipamentos.ComponentCount - 1 do
+   begin
+      if frm_inventario_equipamentos.Components[i] is TQuery then
+         TQuery(frm_inventario_equipamentos.Components[i]).Close;
+   end;
+end;
+

@@ -1,0 +1,20 @@
+UPDATE REMESSA_EMAIL SET QTD_TENTATIVA_ENVIO = 0
+WHERE SEQ_REMESSA_EMAIL IN (
+SELECT R.SEQ_REMESSA_EMAIL FROM REMESSA_EMAIL R
+WHERE R.QTD_TENTATIVA_ENVIO = 10
+AND  R.DSC_ASSUNTO = 'Avaliação de desempenho de fornecedores'
+)
+
+
+SELECT R.* FROM REMESSA_EMAIL R
+WHERE /*R.QTD_TENTATIVA_ENVIO = 10
+AND*/  R.DSC_ASSUNTO = 'Avaliação de desempenho de fornecedores'
+AND EXTRACT(YEAR FROM R.DTA_HOR_CADASTRO) = 2019
+AND R.DSC_ERRO_ENVIO IS NOT NULL AND R.DTA_HOR_ENVIO_EMAIL IS NULL;
+--for update;
+
+/*
+Pesquisa -> Avaliação de desempenho -> Ranking Geral
+no delphi, habilitar o botão Enviar Email 
+Somente CC CGDA00019 e CGDA00044
+*/

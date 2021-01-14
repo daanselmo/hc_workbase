@@ -1,0 +1,4 @@
+select a.dta_inicio_ferias, a.qtd_dias_ferias, '***', a.*
+   from periodo_ferias a
+  where a.num_matricula = 9999 and a.dta_inicio_ferias > sysdate
+order by a.dta_inicio_ferias;

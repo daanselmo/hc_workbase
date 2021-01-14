@@ -1,0 +1,5 @@
+procedure TFrm_cotacao_fornecedor.e_classificacaoKeyPress(Sender: TObject; var Key: Char);
+begin
+ if (not (Key in ['0'..'9','D',#13,#8,#27])) then
+  ShowMessage('Valor Inválido para o Campo');
+end;

@@ -1,0 +1,7 @@
+procedure ex_array;
+var
+   ar: array of String;
+   size: Integer;
+begin
+    setLength(ar, size);
+end;

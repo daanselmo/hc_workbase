@@ -1,0 +1,13 @@
+ INSERT
+  INTO INVENT_PATRIMONIO_LOCAL( SEQ_INVENT_PATRIMONIO_LOCAL,
+                                SEQ_INVENT_PATRIMONIO,
+                                NUM_USER_INVENTARIO,
+                                COD_CENCUSTO,
+                                COD_LOCALIZACAO)
+                     SELECT NVL((SELECT MAX(SEQ_INVENT_PATRIMONIO_LOCAL)
+                                   FROM INVENT_PATRIMONIO_LOCAL), 0) + 1,
+                                1,
+                                1331,
+                                'CCAA00083',
+                                3964
+                               FROM DUAL;

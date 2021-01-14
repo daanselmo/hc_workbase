@@ -1,0 +1,23 @@
+var
+  strLinha, tel1, tel2: String;
+  lista: TStringList;
+begin
+  strLinha := '(99) 99999-99999|(88) 88888-8888';
+ 
+  lista := TStringList.Create;
+  try
+    lista.Clear;
+    ExtractStrings(['|'], [], PChar(strLinha), lista);
+ 
+    if lista.Count >= 1 then
+      tel1 := lista[0];
+ 
+    if lista.Count >= 2 then
+      tel2 := lista[1];
+ 
+    ShowMessage(tel1);
+    ShowMessage(tel2);
+  finally
+    lista.Free;
+  end;
+end;

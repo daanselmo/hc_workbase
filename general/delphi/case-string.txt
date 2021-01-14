@@ -1,0 +1,10 @@
+case AnsiIndexStr(UpperCase(TLabel(frm_configurar_equipamentos_QRCODE.Components[i]).Name), ['LBL_EMPRESTIMO', 'LBLSEBLOQUEADA','LBLNCONFIGURADA']) of
+               1..3:
+                  begin
+                     if TLabel(frm_configurar_equipamentos_QRCODE.Components[i]).Visible then
+                     begin
+                        ShowMessage('Há divergência de parâmetros' + TLabel(frm_configurar_equipamentos_QRCODE.Components[i]).Hint);
+                        Abort;
+                     end;
+                  end;
+           end;

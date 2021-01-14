@@ -1,0 +1,14 @@
+select *
+from r038not x
+where x.numcad = 3071
+and x.numemp = 1;
+
+
+select *
+from r034fun a, r034fot b
+where a.numemp = 1
+and a.tipcol = 1
+and a.numcad = 6373
+and a.numemp = b.numemp
+and a.tipcol = b.tipcol
+and a.numcad = b.numcad;

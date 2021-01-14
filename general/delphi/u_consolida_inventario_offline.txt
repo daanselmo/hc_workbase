@@ -1,0 +1,492 @@
+{Author: Daniel Anselmo,
+ Demand: Inventário Offline
+ Date: 25/08/2020}
+unit u_consolida_inventario_offline;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, ExtCtrls, ComCtrls, StdCtrls, DBTables, Db;
+
+type
+   TAuxGrid = record
+     _codCentroCusto,
+     _codLocalizacao,
+     _codTipoPatrimonio,
+     _codTipoPatrimonioNovo,
+     _dscBem,
+     _dscLocalizacao,
+     _dscLocalizacaoEspecifica,
+     _dscTipoPatrimonio,
+     _dscTipoPatrimonioNovo,
+     _nomCentroCusto,
+     _nomUsuarioCadastro,
+     _numPatrimonio,
+     _numPatrimonioNovo,
+     _modelo, _serie: string;
+     _seqExportacaoInvetario: Real;
+     _numBem,
+     _seqInventarioPatrimonio,
+     _seqInventarioPatrimonioLocal,
+     _estadoBem, _codMarca,
+     _estado_inventario: Integer;
+     _dtaHoraAlteracao: TDateTime;
+end;
+
+procedure AtualizarNumeracaoTipoPatrimonio(auxGrid: TAuxGrid);
+procedure PesquisarTiposDePatrimoniosNovos;
+procedure RetirarPatrimonioCentroCustoAnterior(auxGrid: TAuxGrid);
+procedure InserirCentroCustoBemPatrimonial(auxGrid: TAuxGrid);
+procedure AtualizarDadosBemPatrimonial(auxGrid: TAuxGrid);
+function PesquisarCentroCustoBemPatrimonial(auxGrid: TAuxGrid): TQuery;
+function PesquisarDadosPatrimonio(auxGrid: TAuxGrid): TQuery;
+function PatrimonioJaInventariado(auxGrid: TAuxGrid): Boolean;
+function PatrimonioJaInventariadoNumeroTrocado(auxGrid: TAuxGrid): boolean;
+function ObterInventarioPatrimonio: Integer;
+function ObterInventarioPatrimonioLocal(auxGrid: TAuxGrid): Integer;
+function IniciarInventarioParaLocal(auxGrid: TAuxGrid): Integer;
+
+implementation
+
+uses
+  u_funcoes;
+
+
+Function PatrimonioJaInventariado(auxGrid: TAuxGrid): Boolean;
+Var
+  msg: String;
+Begin
+  Result := False;
+
+  With TQuery.Create(nil) Do
+  Begin
+      DatabaseName := GetDataBaseHCRP.DatabaseName;
+      Close;
+      Sql.Clear;
+      Sql.Add(' SELECT BP.NUM_PATRIMONIO, BP.COD_TIPO_PATRIMONIO ');
+      Sql.Add(' FROM BEM_PATRIMONIAL BP ');
+      Sql.Add(Format('  WHERE BP.NUM_BEM =  %d ', [auxGrid._numBem]));
+      Open;
+
+      if not IsEmpty then
+      begin
+         auxGrid._numPatrimonio := FieldByName('NUM_PATRIMONIO').AsString;
+         auxGrid._codTipoPatrimonio := FieldByName('COD_TIPO_PATRIMONIO').AsString;
+      end;
+
+      Close;
+      Sql.Clear;
+      Sql.Add('SELECT ');
+      SQL.Add('  BP.NUM_PATRIMONIO, ');
+      Sql.Add('  SUBSTR(UPPER(FC_NOM_BEM_PATRIMONIAL(BP.NUM_BEM)), 1, 255) DESCRICAO, ');
+      SQL.Add('  CCBP.COD_CENCUSTO, CC.NOM_CENCUSTO, L.DSC_LOCALIZACAO, CCBP.DTA_INICIO, ');
+      Sql.Add('  U.NOM_USUARIO ||'' ''||U.SBN_USUARIO NOM_USUARIO ');
+      Sql.Add('FROM BEM_PATRIMONIAL BP, ');
+      SQL.Add('     CENTRO_CUSTO_BEM_PATRIMONIAL CCBP, ');
+      Sql.Add('     LOCALIZACAO L, ');
+      Sql.Add('     USUARIO U, ');
+      Sql.Add('     CENTRO_CUSTO CC ');
+      Sql.Add('WHERE 1 = 1 ');
+      Sql.Add(Format('  AND BP.NUM_PATRIMONIO = %d AND BP.COD_TIPO_PATRIMONIO = %d ', [StrToInt(auxGrid._numPatrimonio), StrToInt(auxGrid._codTipoPatrimonio)]));
+      Sql.Add('  AND BP.NUM_BEM = CCBP.NUM_BEM ');
+      Sql.Add(Format('  AND (CCBP.COD_CENCUSTO <> ''%s'' OR CCBP.COD_LOCALIZACAO <> %d) ', [auxGrid._codCentroCusto, StrToInt(auxGrid._codLocalizacao)]));
+      Sql.Add('  AND CCBP.DTA_FIM IS NULL ');
+      SQL.Add('  AND CCBP.SEQ_INVENT_PATRIMONIO_LOCAL > 0 ');
+      Sql.Add('  AND CCBP.COD_LOCALIZACAO = L.COD_LOCALIZACAO ');
+      Sql.Add('  AND U.NUM_USER_BANCO = CCBP.NUM_USER_BANCO ');
+      Sql.Add('  AND CC.COD_CENCUSTO =  CCBP.COD_CENCUSTO ');
+      Sql.Add('  AND EXISTS(SELECT 1 FROM NUMERO_PATRIMONIO NP ');
+      Sql.Add('             WHERE NP.NUM_PATRIMONIO = BP.NUM_PATRIMONIO ');
+      Sql.Add('               AND NP.COD_TIPO_PATRIMONIO = BP.COD_TIPO_PATRIMONIO ');
+      Sql.Add('               AND NP.NUM_BEM = BP.NUM_BEM) ');
+      Sql.Add('ORDER BY 1 ');
+
+      try
+        Open;
+
+        If Not IsEmpty Then
+        Begin
+            msg := 'O patrimônio informado já está inventariado em outro centro de custo' + sLineBreak + sLineBreak +
+                   FieldByName('NUM_PATRIMONIO').AsString + ' - ' + FieldByName('DESCRICAO').AsString + sLineBreak + sLineBreak +
+                   'Centro Custo: ' + FieldByName('COD_CENCUSTO').AsString + ' - ' + FieldByName('NOM_CENCUSTO').AsString + sLineBreak +
+                   'Localização: ' + FieldByName('DSC_LOCALIZACAO').AsString + sLineBreak +
+                   'Movimentação: ' + FieldByName('DTA_INICIO').AsString + sLineBreak +
+                   'Usuário: ' + FieldByName('NOM_USUARIO').AsString;
+
+            Application.MessageBox(PChar(msg), 'Validação', MB_ICONWARNING);
+
+            Result := True;
+        End;
+      except on E: Exception do
+          Application.MessageBox(PChar('Erro ao validar patrimônio já inventariado' + sLineBreak + E.Message), 'Erro', MB_ICONERROR);
+      end;
+  End;
+End;
+
+function PatrimonioJaInventariadoNumeroTrocado(auxGrid: TAuxGrid): boolean;
+Var
+  msg: String;
+Begin
+      Result := true;
+
+      With TQuery.Create(nil) Do
+      Begin
+          DatabaseName := GetDataBaseHCRP.DatabaseName;
+          Close;
+          Sql.Clear;
+          SQL.Add('SELECT ');
+          SQL.Add('  NPA.NUM_PATRIMONIO NUM_ANTIGO, TPA.DSC_TIPO_PATRIMONIO TIPO_ANTIGO, ');
+          Sql.Add('  SUBSTR(UPPER(FC_NOM_BEM_PATRIMONIAL(NPA.NUM_BEM)), 1, 255) DESCRICAO, ');
+          SQL.Add('  NPN.NUM_PATRIMONIO NUM_NOVO, TPN.DSC_TIPO_PATRIMONIO TIPO_NOVO, ');
+          SQL.Add('  CCBP.COD_CENCUSTO || '' - '' || CC.NOM_CENCUSTO CENTRO_CUSTO, ');
+          SQL.Add('  L.COD_LOCALIZACAO || '' - '' || L.DSC_LOCALIZACAO LOCALIZACAO ');
+          SQL.Add('FROM NUMERO_PATRIMONIO NPA, ');
+          SQL.Add('     TIPO_PATRIMONIO TPA, ');
+          SQL.Add('     NUMERO_PATRIMONIO NPN, ');
+          SQL.Add('     TIPO_PATRIMONIO TPN, ');
+          SQL.Add('     CENTRO_CUSTO_BEM_PATRIMONIAL CCBP, ');
+          Sql.Add('     LOCALIZACAO L, ');
+          Sql.Add('     CENTRO_CUSTO CC');
+          SQL.Add(Format('WHERE NPA.NUM_PATRIMONIO = %d ', [StrToInt(auxGrid._numPatrimonio)]));
+          SQL.Add(Format('  AND NPA.COD_TIPO_PATRIMONIO = %d ', [StrToInt(auxGrid._codTipoPatrimonio)]));
+          SQL.Add('  AND NPA.COD_TIPO_PATRIMONIO = TPA.COD_TIPO_PATRIMONIO ');
+          SQL.Add('  AND NVL(TPA.IDF_TIPO_PATRIMONIO, 0) = 0 ');
+          SQL.Add('  AND NPA.NUM_BEM = NPN.NUM_BEM(+) ');
+          SQL.Add('  AND NPN.COD_TIPO_PATRIMONIO = TPN.COD_TIPO_PATRIMONIO(+) ');
+          SQL.Add('  AND NVL(TPN.IDF_TIPO_PATRIMONIO, 0) = 1 ');
+          Sql.Add('  AND NPN.NUM_BEM = CCBP.NUM_BEM ');
+          Sql.Add('  AND CCBP.DTA_FIM IS NULL ');
+          Sql.Add('  AND CCBP.COD_LOCALIZACAO = L.COD_LOCALIZACAO ');
+          Sql.Add('  AND CC.COD_CENCUSTO =  CCBP.COD_CENCUSTO '); 
+
+          try
+
+            Open;
+            Result := Not IsEmpty;
+
+            If Result Then
+            Begin
+                msg := 'O patrimônio informado recebeu uma nova numeração e um novo tipo de patrimônio, os dados antigos não podem ser mais utilizados' + sLineBreak + sLineBreak +
+                       FieldByName('DESCRICAO').AsString + sLineBreak + sLineBreak +
+                       'Dados antigos: ' + FieldByName('NUM_ANTIGO').AsString + ' - ' + FieldByName('TIPO_ANTIGO').AsString + sLineBreak + sLineBreak +
+                       'Dados novos: ' + FieldByName('NUM_NOVO').AsString + ' - ' + FieldByName('TIPO_NOVO').AsString  + sLineBreak + sLineBreak +
+                       'Centro de Custo: ' + FieldByName('CENTRO_CUSTO').AsString + sLineBreak + sLineBreak +
+                       'Localização: ' + FieldByName('LOCALIZACAO').AsString;
+
+                Application.MessageBox(PChar(msg), 'Validação', MB_ICONWARNING);
+            End;
+          except
+            on E: Exception do
+              Application.MessageBox(PChar('Erro ao validar patrimônio já inventariado' + sLineBreak + E.Message), 'Erro', MB_ICONERROR);
+          end;
+      End;
+end;
+
+procedure AtualizarNumeracaoTipoPatrimonio(auxGrid: TAuxGrid);
+begin
+    if not ( (StrToInt(auxGrid._numPatrimonioNovo) > 0) and (StrToInt(auxGrid._codTipoPatrimonioNovo) > 0) ) then  Exit;
+
+    with TQuery.Create(nil) do
+    begin
+        try
+            DatabaseName := GetDataBaseHCRP.DatabaseName;
+            Close;
+            SQL.Clear;
+            //Atualiza novo patrimônio
+            SQL.Add(' UPDATE BEM_PATRIMONIAL SET ');
+            SQL.Add(Format(' COD_TIPO_PATRIMONIO = %d, NUM_PATRIMONIO = %d WHERE NUM_BEM = %d ', [StrToInt(auxGrid._codTipoPatrimonioNovo), StrToInt(auxGrid._numPatrimonioNovo), auxGrid._numBem]));
+            ExecSQL;
+            Close;
+            SQL.Clear;
+
+            SQL.Add('SELECT 1 FROM NUMERO_PATRIMONIO NP ');
+            SQL.Add(Format('WHERE NP.NUM_PATRIMONIO = %d AND NP.COD_TIPO_PATRIMONIO = %d ', [StrToInt(auxGrid._numPatrimonio), StrToInt(auxGrid._codTipoPatrimonio)]));
+            Open;
+
+            //Não pode ter dois patrimônios iguais nessa tabela.
+            if IsEmpty then
+            begin
+                Close;
+                SQL.Clear;
+                //Salva numeração antiga...
+                SQL.Add('INSERT INTO NUMERO_PATRIMONIO ');
+                SQL.Add(' (NUM_PATRIMONIO, COD_TIPO_PATRIMONIO, NUM_BEM) ');
+                SQL.Add(Format('VALUES (%d, %d, %d) ', [StrToInt(auxGrid._numPatrimonio), StrToInt(auxGrid._codTipoPatrimonio), auxGrid._numBem]));
+                ExecSQL;
+            end;
+        except on E : Exception do
+          raise Exception.Create('Erro: ' + sLineBreak + E.Message);
+        end;
+    end;
+end;
+
+procedure PesquisarTiposDePatrimoniosNovos;
+begin
+    with TQuery.Create(nil) do
+    begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        SQL.Clear;
+        SQL.Add(' SELECT ');
+        SQL.Add(' TP.COD_TIPO_PATRIMONIO, TP.DSC_TIPO_PATRIMONIO, ');
+        SQL.Add(' TP.SGL_CODBARRAS, TP.IDF_TIPO_PATRIMONIO ');
+        SQL.Add(' FROM TIPO_PATRIMONIO TP ');
+        SQL.Add(' WHERE TP.IDF_TIPO_PATRIMONIO = 1 ');
+        SQL.Add(' AND EXISTS(SELECT 1 FROM INSTITUICAO_TIPO_PATRIMONIO ITP ');
+        SQL.Add(' WHERE ITP.COD_TIPO_PATRIMONIO = TP.COD_TIPO_PATRIMONIO ');
+        SQL.Add(Format(' AND ITP.COD_INST_SISTEMA = %d) ', [vs_cod_inst_sistema]));
+        SQL.Add(' ORDER BY 2');
+
+        try
+           Open;
+        except on E : Exception do
+            raise Exception.Create('Erro ao pesquisar os tipos de patrimonio novos' + sLineBreak + E.Message);
+        end;
+    end;
+end;
+
+Procedure RetirarPatrimonioCentroCustoAnterior(auxGrid: TAuxGrid);
+Begin
+    With TQuery.Create(nil) Do
+    Begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        Sql.Clear;
+        Sql.Add(' UPDATE CENTRO_CUSTO_BEM_PATRIMONIAL SET ');
+        Sql.Add(' DTA_FIM = :DTA_FIM ');
+        Sql.Add(' WHERE DTA_FIM IS NULL ');
+        Sql.Add(Format(' AND NUM_BEM = (%d) ', [auxGrid._numBem]));
+        Sql.Add(Format(' AND (COD_CENCUSTO <> ''%s'' OR COD_LOCALIZACAO <> %d OR SEQ_INVENT_PATRIMONIO_LOCAL IS NULL) ', [auxGrid._codCentroCusto, StrToInt(auxGrid._codLocalizacao)]));
+        ParamByName('DTA_FIM').Value := auxGrid._dtaHoraAlteracao;
+
+        try
+           ExecSql;
+        except on E : Exception do
+            raise Exception.Create('Erro ao finalizar movimentação do patrimônio do centro de custo/localização anterior' + sLineBreak + E.Message);
+        end;
+    End;
+End;
+
+procedure InserirCentroCustoBemPatrimonial(auxGrid: TAuxGrid);
+begin
+    with TQuery.Create(nil) do
+    begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        SQL.Clear;
+        SQL.Add(' INSERT INTO CENTRO_CUSTO_BEM_PATRIMONIAL ');
+        SQL.Add(' (NUM_BEM, COD_CENCUSTO, NUM_USER_BANCO, ');
+        SQL.Add(' COD_LOCALIZACAO, DTA_INICIO, SEQ_INVENT_PATRIMONIO_LOCAL) ');
+        SQL.Add(Format(' VALUES (%d, ''%s'', FC_NUM_USER_BANCO,', [auxGrid._numBem, auxGrid._codCentroCusto]));
+        SQL.Add(Format(' %d, :DTA_INICIO, %d )', [StrToInt(auxGrid._codLocalizacao), auxGrid._seqInventarioPatrimonioLocal]));
+        ParamByName('DTA_INICIO').Value := auxGrid._dtaHoraAlteracao;
+        try
+           ExecSQL;
+        except on E : Exception do
+            raise Exception.Create('Erro ao inserir movimentação do patrimônio para o centro de custo/localização atual' + sLineBreak + E.Message);
+        end;
+    end;
+end;
+
+procedure AtualizarDadosBemPatrimonial(auxGrid: TAuxGrid);
+begin
+    with TQuery.Create(nil) do
+    begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        SQL.Clear;
+        SQL.Add('UPDATE BEM_PATRIMONIAL SET');
+
+        if auxGrid._estadoBem > 0 then
+           SQL.Add(Format('  IDF_ESTADO_BEM = %d, ', [auxGrid._estadoBem]));
+
+        if not (auxGrid._modelo = EmptyStr) then
+           SQL.Add(Format('  DSC_MODELO = ''%s'', ', [Trim(auxGrid._modelo)]));
+
+        if not (auxGrid._serie = EmptyStr) then
+           SQL.Add(Format('  NUM_SERIE = ''%s'', ', [Trim(auxGrid._serie)]));
+
+        if auxGrid._codMarca > 0 then
+          SQL.Add(Format('  COD_MARCA = %d, ', [auxGrid._codMarca]));
+
+        if not (auxGrid._dscLocalizacaoEspecifica = EmptyStr) then
+           SQL.Add(Format('  CPL_LOCALIZACAO = ''%s'' ', [Trim(auxGrid._dscLocalizacaoEspecifica)]));
+
+        SQL.Add(Format('  WHERE NUM_BEM = %d ', [auxGrid._numBem]));
+
+        try
+          ExecSQL;
+        except on E : Exception do
+            raise Exception.Create('Erro ao atualizar dados do bem patrimonial' + sLineBreak + E.Message);
+        end;
+    end;
+end;
+
+function PesquisarDadosPatrimonio(auxGrid: TAuxGrid): TQuery;
+var
+   tmpQuery: TQuery;
+Begin
+    tmpQuery := TQuery.Create(nil);
+
+    with tmpQuery do
+    begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        Sql.Clear;
+        Sql.Add(' SELECT' );
+        SQL.Add(' NP.NUM_BEM, SUBSTR(FC_NOM_BEM_PATRIMONIAL(NP.NUM_BEM), 1, 255) DESCRICAO, ');
+        SQL.Add(' DECODE(BP.IDF_ESTADO_BEM, 1, ''BOM'', 2, ''REGULAR'', 3, ''MAU'', ');
+        SQL.Add(' 4, ''SUCATA'', ''INDEFINIDO'') ESTADO_BEM, ');
+        Sql.Add(' BP.DSC_MODELO, BP.COD_MARCA, M.NOM_MARCA, ');
+        SQL.Add(' BP.NUM_SERIE, BP.CPL_LOCALIZACAO, NP.NUM_PATRIMONIO, ');
+        SQL.Add(' NP.COD_TIPO_PATRIMONIO, BP.DTA_DESINCORPORACAO ');
+        Sql.Add(' FROM NUMERO_PATRIMONIO NP, BEM_PATRIMONIAL BP, MARCA M ');
+        Sql.Add(Format(' WHERE NP.NUM_PATRIMONIO = (%d) AND NP.COD_TIPO_PATRIMONIO = %d ', [StrToInt(auxGrid._numPatrimonio), StrToInt(auxGrid._codTipoPatrimonio)]));
+        SQL.Add(' AND NP.NUM_BEM = BP.NUM_BEM ');
+        SQL.Add(' AND BP.COD_MARCA = M.COD_MARCA(+) ');
+
+        Result := tmpQuery;
+    end;
+End;
+
+function ObterInventarioPatrimonio: Integer;
+begin
+  Result := 0;
+
+  with TQuery.Create(nil) do
+  begin
+      DatabaseName := GetDataBaseHCRP.DatabaseName;
+      Close;
+      SQL.Clear;
+      SQL.Add(' SELECT ');
+      SQL.Add(' IP.SEQ_INVENT_PATRIMONIO ');
+      SQL.Add(' FROM INVENT_PATRIMONIO IP ');
+      SQL.Add(' WHERE IP.DTA_INICIO <= TRUNC(SYSDATE) ');
+      SQL.Add(' AND IP.DTA_CONCLUSAO >= TRUNC(SYSDATE) ');
+
+      try
+        Open;
+        if not IsEmpty then
+           Result := FieldByName('SEQ_INVENT_PATRIMONIO').AsInteger;
+      except
+        on E : Exception do
+          raise Exception.Create('Ocorreu um erro ao pesquisar a sequência do inventário do tipo de patrimônio' + sLineBreak + E.Message);
+      end;
+  end;
+end;
+
+function ObterInventarioPatrimonioLocal(auxGrid: TAuxGrid): Integer;
+begin
+    Result := 0;
+
+    with TQuery.Create(nil) do
+    begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        SQL.Clear;
+        SQL.Add(' SELECT SEQ_INVENT_PATRIMONIO_LOCAL ');
+        SQL.Add(' FROM INVENT_PATRIMONIO_LOCAL ');
+        SQL.Add(Format(' WHERE SEQ_INVENT_PATRIMONIO = %d ', [auxGrid._seqInventarioPatrimonio]));
+        SQL.Add(Format('  AND COD_CENCUSTO = ''%s'' AND COD_LOCALIZACAO = %d ', [auxGrid._codCentroCusto, StrToInt(auxGrid._codLocalizacao)]));
+
+        try
+          Open;
+          if not IsEmpty then
+             Result := FieldByName('SEQ_INVENT_PATRIMONIO_LOCAL').AsInteger;
+        except on E : Exception do
+            raise Exception.Create('Ocorreu um erro ao verificar se o inventário para o local já foi iniciado' + sLineBreak + E.Message);
+        end;
+    end;
+end;
+
+function IniciarInventarioParaLocal(auxGrid: TAuxGrid): Integer;
+begin
+    Result := -1;
+
+    if auxGrid._seqInventarioPatrimonioLocal > 0 then  Exit;
+
+    with TQuery.Create(nil) do
+    begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        SQL.Clear;
+        SQL.Add(' INSERT INTO INVENT_PATRIMONIO_LOCAL ');
+        SQL.Add(' (SEQ_INVENT_PATRIMONIO_LOCAL, ');
+        SQL.Add(' SEQ_INVENT_PATRIMONIO, ');
+        SQL.Add(' NUM_USER_INVENTARIO, COD_CENCUSTO, COD_LOCALIZACAO) ');
+        SQL.Add(' SELECT ');
+        SQL.Add(' NVL((SELECT MAX(SEQ_INVENT_PATRIMONIO_LOCAL) ');
+        SQL.Add(' FROM INVENT_PATRIMONIO_LOCAL), 0) + 1, ');
+        SQL.Add(Format(' %d, FC_NUM_USER_BANCO, ''%s'', %d FROM DUAL ', [auxGrid._seqInventarioPatrimonio, auxGrid._codCentroCusto, StrToInt(auxGrid._codLocalizacao)]));
+
+        try
+          ExecSQL;
+          Result  := ObterInventarioPatrimonioLocal(auxGrid);
+        except on E : Exception do
+            raise Exception.Create('Ocorreu um erro ao iniciar o inventário para o local' + sLineBreak + E.Message);
+        end;
+    end;
+end;
+
+function PesquisarCentroCustoBemPatrimonial(auxGrid: TAuxGrid): TQuery;
+Var
+   tmpQuery: TQuery;
+begin
+    tmpQuery :=  TQuery.Create(nil);
+
+    With tmpQuery Do
+    Begin
+        DatabaseName := GetDataBaseHCRP.DatabaseName;
+        Close;
+        Sql.Clear;
+        Sql.Add('SELECT');
+        SQL.Add('  CCBP.NUM_BEM, CCBP.COD_CENCUSTO, CCBP.COD_LOCALIZACAO, CCBP.DTA_INICIO,');
+        SQL.Add('  CCBP.DTA_FIM, CCBP.NUM_USER_BANCO, BP.COD_TIPO_PATRIMONIO, BP.NUM_PATRIMONIO,');
+        Sql.Add('  SUBSTR(UPPER(FC_NOM_BEM_PATRIMONIAL(BP.NUM_BEM)), 1, 255) DESCRICAO,');
+        Sql.Add('  L.DSC_LOCALIZACAO, U.NOM_USUARIO ||'' ''||U.SBN_USUARIO NOM_USUARIO,');
+        SQL.Add('  TP.DSC_TIPO_PATRIMONIO,');
+        SQL.Add('  (SELECT SBP.SGL_SAP_CATEGORIA FROM INTEGRA_SAP.SAP_BEM_PATRIMONIAL SBP ');
+        SQL.Add('   WHERE SBP.NUM_BEM = BP.NUM_BEM) SGL_SAP_CATEGORIA, ');
+        SQL.Add('  (SELECT NP.NUM_PATRIMONIO FROM NUMERO_PATRIMONIO NP');
+        SQL.Add('   WHERE NP.NUM_BEM = BP.NUM_BEM');
+        SQL.Add('     AND (NP.COD_TIPO_PATRIMONIO <> BP.COD_TIPO_PATRIMONIO');
+        SQL.Add('       OR NP.NUM_PATRIMONIO <> BP.NUM_PATRIMONIO)');
+        SQL.Add('     AND ROWNUM <= 1) NUM_PATRIMONIO_ANTIGO,');
+        SQL.Add('  (SELECT TP.DSC_TIPO_PATRIMONIO FROM NUMERO_PATRIMONIO NP, TIPO_PATRIMONIO TP');
+        SQL.Add('   WHERE NP.NUM_BEM = BP.NUM_BEM');
+        SQL.Add('     AND NP.COD_TIPO_PATRIMONIO = TP.COD_TIPO_PATRIMONIO');
+        SQL.Add('     AND (NP.COD_TIPO_PATRIMONIO <> BP.COD_TIPO_PATRIMONIO');
+        SQL.Add('       OR NP.NUM_PATRIMONIO <> BP.NUM_PATRIMONIO)');
+        SQL.Add('     AND ROWNUM <= 1) DSC_TIPO_PATRIMONIO_ANTIGO,');
+        SQL.Add('  DECODE(BP.IDF_ESTADO_BEM, 0, ''INDEFINIDO'', 1, ''BOM'', 2, ''REGULAR'', 3, ''MAU'', 4, ''SUCATA'') IDF_ESTADO_BEM,');
+        SQL.Add('  BP.CPL_LOCALIZACAO');
+        Sql.Add('FROM CENTRO_CUSTO_BEM_PATRIMONIAL CCBP,');
+        Sql.Add('     BEM_PATRIMONIAL BP,');
+        Sql.Add('     TIPO_PATRIMONIO TP,');
+        Sql.Add('     LOCALIZACAO L,');
+        Sql.Add('     USUARIO U');
+        Sql.Add('WHERE 1 = 1');
+        Sql.Add('  AND CCBP.DTA_FIM IS NULL');
+        Sql.Add(Format('  AND CCBP.COD_CENCUSTO = ''%s'' AND CCBP.COD_LOCALIZACAO = %d ', [auxGrid._codCentroCusto, StrToInt(auxGrid._codLocalizacao)]));
+        Sql.Add('  AND CCBP.NUM_BEM = BP.NUM_BEM');
+        Sql.Add('  AND CCBP.COD_LOCALIZACAO = L.COD_LOCALIZACAO');
+        Sql.Add('  AND U.NUM_USER_BANCO = CCBP.NUM_USER_BANCO');
+        Sql.Add('  AND BP.COD_TIPO_PATRIMONIO = TP.COD_TIPO_PATRIMONIO');
+        Sql.Add('  AND EXISTS(SELECT 1 FROM NUMERO_PATRIMONIO NP');
+        Sql.Add('             WHERE NP.NUM_PATRIMONIO = BP.NUM_PATRIMONIO');
+        Sql.Add('               AND NP.COD_TIPO_PATRIMONIO = BP.COD_TIPO_PATRIMONIO');
+        Sql.Add('               AND NP.NUM_BEM = BP.NUM_BEM)');
+        Sql.Add('  AND EXISTS(SELECT 1 FROM INVENT_PATRIMONIO_LOCAL IPL');
+        Sql.Add(Format('             WHERE IPL.SEQ_INVENT_PATRIMONIO_LOCAL = %d', [auxGrid._seqInventarioPatrimonioLocal]));
+        Sql.Add('               AND IPL.COD_CENCUSTO = CCBP.COD_CENCUSTO');
+        Sql.Add('               AND IPL.COD_LOCALIZACAO = CCBP.COD_LOCALIZACAO');
+        Sql.Add('               AND IPL.SEQ_INVENT_PATRIMONIO_LOCAL = CCBP.SEQ_INVENT_PATRIMONIO_LOCAL');    
+        Sql.Add('               AND IPL.DTA_FINALIZACAO IS NULL)');
+        Sql.Add('ORDER BY BP.NUM_PATRIMONIO');
+
+        Result := tmpQuery;
+    End;
+End;
+
+end.

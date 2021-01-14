@@ -1,0 +1,30 @@
+uses
+  TypInfo;
+ 
+procedure TBoleto.ValidarDados;
+var
+  ListaPropriedades: TPropList;
+  Contador: integer;
+  Preenchido: boolean;
+  Valor: variant;
+begin
+  // Preenche uma lista com as propriedades do objeto
+  GetPropList(TypeInfo(TBoleto), tkAny, @ListaPropriedades);
+ 
+  // Executa um loop nas propriedades do objeto
+  for Contador := Low(ListaPropriedades) to High(ListaPropriedades) do
+  begin
+    // Obtém o valor da propriedade
+    Valor := GetPropValue(Self, ListaPropriedades[Contador]^.Name);
+ 
+    // Valida o valor, exigindo que seja diferente de 0 e diferente de vazio
+    Preenchido := (VarToStr(Valor) <> EmptyStr) and (VarToStr(Valor) <> '0');
+ 
+    // Se não estiver preenchido, exibe uma mensagem indicando o nome da propriedade
+    if not Preenchido then
+    begin
+      ShowMessage('Valor não preenchido: ' + ListaPropriedades[Contador]^.Name);
+      Abort;
+    end
+  end;
+end;

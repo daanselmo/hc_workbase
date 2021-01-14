@@ -1,0 +1,9 @@
+procedure TfrmInventarioOffline.edtSearchKeyPress(Sender: TObject;
+var Key: Char);
+begin
+     if ord(Key) = VK_RETURN then
+     begin
+        btnLocateClick(Sender);
+        Key := #0;
+     end;
+end;

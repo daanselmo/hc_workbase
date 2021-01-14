@@ -1,0 +1,19 @@
+  {$REGION 'Validação'}
+   If dmComprasFAEPA.cdsQuadroInsercao.IsEmpty Then
+   Begin
+      MessageBox(Application.Handle, 'Não há dados para serem inseridos', 'Erro', MB_ICONERROR + MB_OK);
+      Exit;
+   End;
+   {$ENDREGION 'Validação'}
+
+   Try
+      DmComprasFAEPA.marcarBookMark(DmComprasFAEPA.cdsQuadroPedidos);
+      dmComprasFAEPA.inserirPrecoFornecedor;
+      DmComprasFAEPA.goBookMark(DmComprasFAEPA.cdsQuadroPedidos);
+   Except On E: Exception Do
+         MessageBox(Handle, Pchar(E.Message), 'Erro', MB_ICONERROR);
+   End;
+   
+
+   
+   

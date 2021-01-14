@@ -1,0 +1,2 @@
+#calibrar passo da impressora TSC TTP-244
+ - Segurar o botão Pause em seguida, ligar.

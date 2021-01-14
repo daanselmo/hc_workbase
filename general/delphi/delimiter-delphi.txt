@@ -1,0 +1,10 @@
+function TFrm_Abertura_licitacao.Split(p_separador : Char; p_texto : String) : TStringList;
+var
+  lista : TStringList;
+begin
+  lista := TStringList.Create;
+
+    lista.Clear;
+    ExtractStrings([p_separador],[], PChar(p_texto), lista);
+    Result := lista
+end;

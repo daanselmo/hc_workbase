@@ -1,0 +1,18 @@
+Function Tf_acerto_localizacao_bem_usuario.AlterarLocalizacaoBem : Boolean;
+begin
+  AlterarLocalizacaoBem := false;
+  With QI do
+    Begin
+       Close;
+       Sql.Clear;
+       Sql.Add(' UPDATE BEM_PATRIMONIAL SET CPL_LOCALIZACAO = UPPER(:CPL_LOCALIZACAO), ');
+       Sql.Add('        NUM_USER_ALTEROU_LOC = :NUM_USER_ALTEROU_LOC, ');
+       Sql.Add('        DTA_HOR_USER_ALTEROU_LOC = SYSDATE ');
+       Sql.Add(' WHERE NUM_BEM = :NUM_BEM ');
+       ParamByName('NUM_BEM').AsFloat := cdsBens.FieldByName('NUM_BEM').AsFloat;
+       ParamByName('CPL_LOCALIZACAO').AsString := cdsBens.FieldByName('CPL_LOCALIZACAO').AsString;
+       ParamByName('NUM_USER_ALTEROU_LOC').AsFloat := VS_num_user_banco;
+       ExecSql;
+       Result := RowsAffected >0;
+    end;
+end;

@@ -1,0 +1,672 @@
+{Daniel Anselmo:
+Data: 18/08/2020
+Demanda: Auxliar inventário offline}
+unit u_inventario_offline;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, DB, DBTables, Grids, DBGrids, StdCtrls, DBCtrls, Buttons, Provider,
+  DBClient, Menus, u_consolida_inventario_offline;
+
+type
+  TfrmInventarioOffline = class(TForm)
+    bbExcel: TBitBtn;
+    btnLocate: TSpeedButton;
+  	SpeedButton1: TSpeedButton;
+    cbCC: TDBLookupComboBox;
+    cbItensDivergentes: TComboBox;
+    cbLocalizacao: TDBLookupComboBox;
+    cbTpPatAntigo: TDBLookupComboBox;
+    cbTpPatNovo: TDBLookupComboBox;
+    cds_divergente: TClientDataSet;
+    cds_divergenteCOD_CENCUSTO: TStringField;
+    cds_divergenteCOD_LOCALIZACAO: TFloatField;
+    cds_divergenteCOD_MARCA: TFloatField;
+    cds_divergenteCOD_TIPO_PATRIMONIO: TFloatField;
+    cds_divergenteCOD_TIPO_PATRIMONIO_NOVO: TFloatField;
+    cds_divergenteDSC_BEM: TStringField;
+    cds_divergenteDSC_LOCALIZACAO: TStringField;
+    cds_divergenteDSC_LOCALIZACAO_ESPEC: TStringField;
+    cds_divergenteDSC_MARCA: TStringField;
+    cds_divergenteDSC_MODELO: TStringField;
+    cds_divergenteDSC_TIPO_PATRIMONIO: TStringField;
+    cds_divergenteDSC_TIPO_PATRIMONIO_NOVO: TStringField;
+    cds_divergenteDTA_HOR_CADASTRO_INVENT: TDateTimeField;
+    cds_divergenteDTA_HOR_EXPORTACAO: TDateTimeField;
+    cds_divergenteIDF_ESTADO: TFloatField;
+    cds_divergenteNOM_CENCUSTO: TStringField;
+    cds_divergenteNOM_USUARIO_CADASTRO: TStringField;
+    cds_divergenteNUM_BEM: TFloatField;
+    cds_divergenteNUM_PATRIMONIO: TFloatField;
+    cds_divergenteNUM_PATRIMONIO_NOVO: TFloatField;
+    cds_divergenteNUM_SERIE: TStringField;
+    cds_divergentePATRIMONIO_ANTIGO: TStringField;
+    cds_divergentePATRIMONIO_NOVO: TStringField;
+    cds_divergenteSEQ_EXPORTACAO_INVENTARIO: TFloatField;
+    DBGrid1: TDBGrid;
+    ds_cc: TDataSource;
+    ds_divergente: TDataSource;
+    ds_localizacao: TDataSource;
+    ds_patantigo: TDataSource;
+    ds_patnovo: TDataSource;
+    dsp_divergente: TDataSetProvider;
+    edtCodCC: TEdit;
+    edtCodLocalizacao: TEdit;
+    edtLocEspecifica: TEdit;
+    edtNroPatAntigo: TEdit;
+    edtNroPatNovo: TEdit;
+    edtSearch: TEdit;
+    edtTipoPatNovo: TEdit;
+    edtTpPatAntigo: TEdit;
+    GroupBox1: TGroupBox;
+    im_consolidar_inventario: TMenuItem;
+    im_excluir_digercencia: TMenuItem;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
+    Label9: TLabel;
+    ppm_excluir_divergencia: TPopupMenu;    
+    q_ccCOD_CENCUSTO: TStringField;
+    q_ccNOM_CENCUSTO: TStringField;
+   	q_cc: TQuery;
+    q_del_divergencia: TQuery;
+    q_divergente_tp01: TQuery;
+    q_divergente_tp02: TQuery;
+    q_divergente_tp03: TQuery;
+    q_divergente_tp04: TQuery;
+    q_localizacao: TQuery;
+	  q_middleware: TQuery;
+    q_patantigo: TQuery;
+	  q_patnovo: TQuery;
+	  q_up_divergente: TQuery;
+    q_localizacaoCOD_LOCALIZACAO: TFloatField;
+    q_localizacaoDSC_LOCALIZACAO: TStringField;    
+    q_patantigoCOD_TIPO_PATRIMONIO: TFloatField;
+    q_patantigoDSC_TIPO_PATRIMONIO: TStringField;    
+    q_patnovoCOD_TIPO_PATRIMONIO: TFloatField;
+    q_patnovoDSC_TIPO_PATRIMONIO: TStringField;    
+    sd: TSaveDialog;
+    q_integracao: TQuery;
+  	procedure bbExcelClick(Sender: TObject);
+    procedure btnLocateClick(Sender: TObject);
+    procedure cbCCClick(Sender: TObject);
+    procedure cbCCExit(Sender: TObject);
+    procedure cbItensDivergentesClick(Sender: TObject);
+    procedure cbLocalizacaoClick(Sender: TObject);
+    procedure cbLocalizacaoExit(Sender: TObject);
+    procedure cbTpPatAntigoClick(Sender: TObject);
+    procedure cbTpPatAntigoExit(Sender: TObject);
+    procedure cbTpPatNovoClick(Sender: TObject);
+    procedure cbTpPatNovoExit(Sender: TObject);
+    procedure DBGrid1DblClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure im_consolidar_inventarioClick(Sender: TObject);
+    procedure im_excluir_digercenciaClick(Sender: TObject);
+    procedure SpeedButton1Click(Sender: TObject);
+    procedure DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
+      DataCol: Integer; Column: TColumn; State: TGridDrawState);
+    procedure  PintarColunasGrid(index: Integer);
+    procedure edtSearchKeyPress(Sender: TObject; var Key: Char);
+
+
+  private
+    { Private declarations }
+    auxGrid: TAuxGrid;
+    gbl_COD_LOCALIZACAO : string;
+    gbl_COD_TIPO_PATRIMONIO : string;
+    gbl_COD_TIPO_PATRIMONIO_NOVO : string;
+    gbl_NOM_CENCUSTO : string; 
+    qryInventario, qryAtivo: TQuery;
+    function AtualizouInventarioOffline(qry: TQuery; auxGrid: TAuxGrid): Boolean;
+    function CamposValidos: Boolean;
+    function ConsolidarInventarioOffline: Boolean;
+    procedure LimparCamposEObjetosBanco;
+    procedure IniciarCombos(Qry: TQuery; edt: TEdit; param: Boolean = False);
+    procedure MontarGridAlterada(p_aux: TAuxGrid);
+    procedure TrechoCombo(Qry: TQuery);
+    procedure AtualizarOuRemoverItensInventarioOffline(qry: TQuery);
+    procedure ValidarPermissaoConsolidarInvOffline(Sender: TObject; Qry: TQuery);
+  public
+    { Public declarations }
+  end;
+  
+const
+   MIN_WIDTH = 20;
+   ORD_WIDTH = 120;
+   MID_WIDTH = 350;
+   MAX_WIDTH = 520;
+
+var
+  frmInventarioOffline: TfrmInventarioOffline;
+
+implementation
+
+uses
+   U_Principal, u_Exportacao, u_Funcoes,
+   uTBancoDeDadosOracleHC;
+
+{$R *.dfm}
+
+procedure TfrmInventarioOffline.cbCCClick(Sender: TObject);
+begin
+    edtCodCC.Text := q_ccCOD_CENCUSTO.AsString;
+
+    if Length(q_ccNOM_CENCUSTO.AsString) > 40 then
+       gbl_NOM_CENCUSTO := Copy(q_ccNOM_CENCUSTO.AsString,1,40)
+    else
+       gbl_NOM_CENCUSTO := q_ccNOM_CENCUSTO.AsString;
+
+   if q_cc.Active then
+      q_cc.Close;
+
+   cbCC.Width := MIN_WIDTH;
+end;
+
+procedure TfrmInventarioOffline.cbCCExit(Sender: TObject);
+begin
+    cbCC.Width := MIN_WIDTH;
+end;
+
+procedure TfrmInventarioOffline.cbItensDivergentesClick(Sender: TObject);
+begin
+   case cbItensDivergentes.ItemIndex of
+      1: ValidarPermissaoConsolidarInvOffline(Sender, q_divergente_tp01);
+      2: ValidarPermissaoConsolidarInvOffline(Sender, q_divergente_tp02);
+      3: ValidarPermissaoConsolidarInvOffline(Sender, q_divergente_tp03);
+      4: ValidarPermissaoConsolidarInvOffline(Sender, q_divergente_tp04);
+   end;
+end;
+
+
+procedure TfrmInventarioOffline.cbLocalizacaoClick(Sender: TObject);
+begin
+    edtCodLocalizacao.Text := q_localizacaoDSC_LOCALIZACAO.AsString;
+    gbl_COD_LOCALIZACAO := q_localizacaoCOD_LOCALIZACAO.AsString;
+
+     if q_localizacao.Active then
+        q_localizacao.Close;
+
+     cbLocalizacao.Width := MIN_WIDTH; 
+end;
+
+procedure TfrmInventarioOffline.cbLocalizacaoExit(Sender: TObject);
+begin
+   cbLocalizacao.Width := MIN_WIDTH;
+end;
+
+procedure TfrmInventarioOffline.cbTpPatAntigoClick(Sender: TObject);
+begin
+     edtTpPatAntigo.Text := q_patantigoDSC_TIPO_PATRIMONIO.AsString;
+     gbl_COD_TIPO_PATRIMONIO := q_patantigoCOD_TIPO_PATRIMONIO.AsString;
+
+     if q_patantigo.Active then
+        q_patantigo.Close;
+
+     cbTpPatAntigo.Width := MIN_WIDTH;
+end;
+
+procedure TfrmInventarioOffline.cbTpPatAntigoExit(Sender: TObject);
+begin
+   cbTpPatAntigo.Width := MIN_WIDTH;
+end;
+
+procedure TfrmInventarioOffline.cbTpPatNovoClick(Sender: TObject);
+begin
+   edtTipoPatNovo.Text := q_patnovoDSC_TIPO_PATRIMONIO.AsString;
+   gbl_COD_TIPO_PATRIMONIO_NOVO := q_patnovoCOD_TIPO_PATRIMONIO.AsString;
+
+   if q_patnovo.Active then
+      q_patnovo.Close;
+
+   cbTpPatNovo.Width := MIN_WIDTH;
+end;
+
+procedure TfrmInventarioOffline.cbTpPatNovoExit(Sender: TObject);
+begin
+   cbTpPatNovo.Width := MIN_WIDTH;
+end;
+
+procedure TfrmInventarioOffline.DBGrid1DblClick(Sender: TObject);
+begin
+    edtNroPatAntigo.Text := cds_divergenteNUM_PATRIMONIO.AsString;
+    edtTpPatAntigo.Text := cds_divergenteDSC_TIPO_PATRIMONIO.AsString;
+    edtCodCC.Text := cds_divergenteCOD_CENCUSTO.AsString;
+    edtNroPatNovo.Text := cds_divergenteNUM_PATRIMONIO_NOVO.AsString;
+    edtTipoPatNovo.Text := cds_divergenteDSC_TIPO_PATRIMONIO_NOVO.AsString;
+    edtCodLocalizacao.Text := cds_divergenteDSC_LOCALIZACAO.AsString;
+    edtLocEspecifica.Text := cds_divergenteDSC_LOCALIZACAO_ESPEC.AsString;
+    cbTpPatAntigo.Width := ORD_WIDTH;
+    cbTpPatNovo.Width := ORD_WIDTH;
+    cbCC.Width := MID_WIDTH;
+    cbLocalizacao.Width := MAX_WIDTH;
+
+    IniciarCombos(q_patantigo, edtTpPatAntigo, True);
+    IniciarCombos(q_patnovo, edtTipoPatNovo);
+    IniciarCombos(q_cc, edtCodCC);
+    IniciarCombos(q_localizacao, edtCodCC);
+end;
+
+
+
+procedure TfrmInventarioOffline.DBGrid1DrawColumnCell(Sender: TObject;
+  const Rect: TRect; DataCol: Integer; Column: TColumn; State: TGridDrawState);
+begin
+   with DBGrid1 do
+    begin
+         if (SelectedRows.CurrentRowSelected) then
+         begin
+             Canvas.Brush.Color := clOlive;
+             Canvas.FillRect(rect);
+             DefaultDrawColumnCell(Rect, DataCol, Column, State);
+         end
+         else if (gdSelected in State) then
+         begin
+             SelectedRows.Refresh; 
+             Canvas.Brush.Color := clSkyBlue;
+             Canvas.FillRect(rect);
+             DefaultDrawColumnCell(Rect, DataCol, Column, State);
+         end;
+    end;
+end;
+
+procedure TfrmInventarioOffline.edtSearchKeyPress(Sender: TObject;
+var Key: Char);
+begin
+     if ord(Key) = VK_RETURN then
+     begin
+        btnLocateClick(Sender);
+        Key := #0;
+     end;
+end;
+
+procedure TfrmInventarioOffline.IniciarCombos(Qry: TQuery; edt: TEdit; param: Boolean = False);
+begin
+     if not (edt.Text = EmptyStr) then
+     begin
+        with Qry do
+        begin
+           if Active then Close;
+           if param then
+              ParamByName('NUM_PATRIMONIO').Value := cds_divergenteNUM_PATRIMONIO.AsFloat;
+           Open;
+        end;
+     end
+     else
+     begin
+         ShowMessage('Selecione um registro com patrimônio válido.');
+     end;
+end;
+
+procedure TfrmInventarioOffline.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+   LimparCamposEObjetosBanco;
+end;
+
+procedure TfrmInventarioOffline.im_consolidar_inventarioClick(Sender: TObject);
+var
+  i: Integer;
+begin
+    with DBGrid1 do
+    begin
+         if SelectedRows.Count >= 1 then
+         begin
+             for i := 0 to SelectedRows.Count - 1 do
+             begin
+                 DataSource.DataSet.GotoBookmark(Pointer(SelectedRows.items[i]));
+
+                 if not ConsolidarInventarioOffline then
+                 begin
+                     Application.MessageBox(Pchar('Falha em consolidar inventário.'), 'Informação', MB_ICONINFORMATION);
+                     Exit;
+                 end;
+
+                 cds_divergente.Delete;
+             end;
+              SelectedRows.Refresh;
+              Application.MessageBox(Pchar('Operação realizada com sucesso.'), 'Informação', MB_ICONINFORMATION);
+         end;
+    end;
+end;
+
+procedure TfrmInventarioOffline.im_excluir_digercenciaClick(Sender: TObject);
+begin
+    AtualizarOuRemoverItensInventarioOffline(q_del_divergencia);
+    cds_divergente.Delete;
+end;
+
+
+procedure TfrmInventarioOffline.AtualizarOuRemoverItensInventarioOffline(qry: TQuery);
+begin
+   with qry do
+   begin
+      ParamByName('SEQ_EXPORTACAO_INVENTARIO').Value := cds_divergenteSEQ_EXPORTACAO_INVENTARIO.AsFloat;
+      try
+          ExecSQL;
+      except on E : Exception do
+          ShowMessage(E.ClassName+' Erro ao modificar registro : '+E.Message);
+      end;
+   end;
+end;
+
+procedure TfrmInventarioOffline.SpeedButton1Click(Sender: TObject);
+begin
+    if CamposValidos then
+    begin
+         auxGrid._numPatrimonio := Trim(edtNroPatAntigo.Text);
+         auxGrid._dscTipoPatrimonio := edtTpPatAntigo.Text;
+
+         if not ValorVazio(gbl_COD_TIPO_PATRIMONIO) then
+            auxGrid._codTipoPatrimonio := gbl_COD_TIPO_PATRIMONIO
+         else
+            auxGrid._codTipoPatrimonio := cds_divergenteCOD_TIPO_PATRIMONIO.AsString;
+
+         auxGrid._codCentroCusto := edtCodCC.Text;
+
+         if not ValorVazio(gbl_NOM_CENCUSTO) then
+            auxGrid._nomCentroCusto := gbl_NOM_CENCUSTO
+         else
+            auxGrid._nomCentroCusto := cds_divergenteNOM_CENCUSTO.AsString;
+
+         if not ValorVazio(gbl_COD_LOCALIZACAO) then
+             auxGrid._codLocalizacao := gbl_COD_LOCALIZACAO
+         else
+             auxGrid._codLocalizacao := cds_divergenteCOD_LOCALIZACAO.AsString;
+
+         auxGrid._dscLocalizacao := edtCodLocalizacao.Text;
+         auxGrid._dscLocalizacaoEspecifica := edtLocEspecifica.Text;
+         auxGrid._numPatrimonioNovo := Trim(edtNroPatNovo.Text);
+
+         if not ValorVazio(gbl_COD_TIPO_PATRIMONIO_NOVO) then
+            auxGrid._codTipoPatrimonioNovo :=  gbl_COD_TIPO_PATRIMONIO_NOVO
+         else
+            auxGrid._codTipoPatrimonioNovo :=  cds_divergenteCOD_TIPO_PATRIMONIO_NOVO.AsString;
+
+         auxGrid._dscTipoPatrimonioNovo := edtTipoPatNovo.Text;
+         auxGrid._nomUsuarioCadastro := Frm_Principal.V_NOME_USUARIO;
+         auxGrid._dtaHoraAlteracao := Now;
+         auxGrid._dscBem := cds_divergenteDSC_BEM.AsString;
+         auxGrid._seqExportacaoInvetario := cds_divergenteSEQ_EXPORTACAO_INVENTARIO.AsFloat;
+
+         if AtualizouInventarioOffline(q_up_divergente, auxGrid) then
+         begin
+           MontarGridAlterada(auxGrid);
+           LimparCamposEObjetosBanco;
+         end;
+    end;
+end;
+
+function TfrmInventarioOffline.AtualizouInventarioOffline(qry: TQuery; auxGrid: TAuxGrid): Boolean;
+begin
+    with qry do
+    begin
+         if Active then Close;
+         ParamByName('NUM_PATRIMONIO').Value := auxGrid._numPatrimonio;
+         ParamByName('DSC_TIPO_PATRIMONIO').Value := auxGrid._dscTipoPatrimonio;
+         ParamByName('COD_TIPO_PATRIMONIO').Value :=auxGrid._codTipoPatrimonio;
+         ParamByName('COD_CENCUSTO').Value := auxGrid._CodCentroCusto;
+         ParamByName('NOM_CENCUSTO').Value := auxGrid._nomCentroCusto;
+         ParamByName('COD_LOCALIZACAO').Value := auxGrid._codLocalizacao;
+         ParamByName('DSC_LOCALIZACAO').Value := auxGrid._dscLocalizacao;
+         ParamByName('DSC_LOCALIZACAO_ESPEC').Value := auxGrid._dscLocalizacaoEspecifica;
+         ParamByName('NUM_PATRIMONIO_NOVO').Value := auxGrid._numPatrimonioNovo;
+         ParamByName('COD_TIPO_PATRIMONIO_NOVO').Value := auxGrid._codTipoPatrimonioNovo;
+         ParamByName('DSC_TIPO_PATRIMONIO_NOVO').Value := auxGrid._dscTipoPatrimonioNovo;
+         ParamByName('NOM_USUARIO_CADASTRO').Value := auxGrid._nomUsuarioCadastro;
+         ParamByName('SEQ_EXPORTACAO_INVENTARIO').Value := cds_divergenteSEQ_EXPORTACAO_INVENTARIO.AsFloat;
+         ExecSQL;
+
+         AtualizouInventarioOffline := RowsAffected > 0;
+    end;
+end;
+
+procedure TfrmInventarioOffline.bbExcelClick(Sender: TObject);
+begin
+    sd.DefaultExt := 'xls';
+    sd.Filter:='*.xls';
+    sd.FileName:='*.xls';
+
+    if sd.Execute then
+      ExportaExcel(ds_divergente.DataSet,sd.FileName,'Ocorrencias');
+end;
+
+procedure TfrmInventarioOffline.btnLocateClick(Sender: TObject);
+begin
+     if not ValorVazio(edtSearch.Text) then
+     begin
+         cds_divergente.Locate('NUM_PATRIMONIO_NOVO',edtSearch.Text, []);
+     end
+     else
+        ShowMessage('Campo não pode ser vazio...');
+end;
+
+procedure TfrmInventarioOffline.MontarGridAlterada(p_aux: TAuxGrid);
+begin
+    if ds_divergente.State in [dsBrowse] then
+    begin
+       with cds_divergente do
+       begin
+           Edit;
+           FieldByName('NUM_PATRIMONIO').Value := auxGrid._numPatrimonio;
+           FieldByName('DSC_TIPO_PATRIMONIO').Value := auxGrid._dscTipoPatrimonio;
+           FieldByName('NUM_PATRIMONIO_NOVO').Value := auxGrid._numPatrimonioNovo;
+           FieldByName('DSC_TIPO_PATRIMONIO_NOVO').Value := auxGrid._dscTipoPatrimonioNovo;
+           FieldByName('PATRIMONIO_ANTIGO').Value := auxGrid._numPatrimonio + '-' + auxGrid._dscTipoPatrimonio;
+           FieldByName('PATRIMONIO_NOVO').Value := auxGrid._numPatrimonioNovo + '-' + auxGrid._dscTipoPatrimonioNovo;
+           FieldByName('COD_CENCUSTO').Value := auxGrid._CodCentroCusto;
+           FieldByName('NOM_CENCUSTO').Value := auxGrid._nomCentroCusto;
+           FieldByName('DSC_BEM').Value := auxGrid._dscBem;
+           FieldByName('DSC_LOCALIZACAO').Value := auxGrid._dscLocalizacao;
+           FieldByName('DSC_LOCALIZACAO_ESPEC').Value := auxGrid._dscLocalizacaoEspecifica;
+           FieldByName('NOM_USUARIO_CADASTRO').Value := auxGrid._nomUsuarioCadastro;
+           FieldByName('DTA_HOR_CADASTRO_INVENT').Value := auxGrid._dtaHoraAlteracao;
+           Post;
+       end;
+    end;
+end;
+
+function TfrmInventarioOffline.ConsolidarInventarioOffline: Boolean;
+var
+  l_estado_inventario: Integer;
+  auxGrid: TAuxGrid;
+begin
+   Result := False;
+
+   auxGrid._numBem := cds_divergenteNUM_BEM.AsInteger;
+   auxGrid._codLocalizacao := cds_divergenteCOD_LOCALIZACAO.AsString;
+   auxGrid._dscLocalizacaoEspecifica := cds_divergenteDSC_LOCALIZACAO_ESPEC.AsString;
+   auxGrid._codCentroCusto := cds_divergenteCOD_CENCUSTO.AsString;
+   auxGrid._seqInventarioPatrimonio := ObterInventarioPatrimonio;
+   auxGrid._numPatrimonio := cds_divergenteNUM_PATRIMONIO.AsString;
+   auxGrid._codTipoPatrimonio := cds_divergenteCOD_TIPO_PATRIMONIO.AsString;
+   auxGrid._numPatrimonioNovo := cds_divergenteNUM_PATRIMONIO_NOVO.AsString;
+   auxGrid._codTipoPatrimonioNovo := cds_divergenteCOD_TIPO_PATRIMONIO_NOVO.AsString;
+   auxGrid._estadoBem := cds_divergenteIDF_ESTADO.AsInteger;
+   auxGrid._codMarca := cds_divergenteCOD_MARCA.AsInteger;
+   auxGrid._modelo := cds_divergenteDSC_MODELO.AsString;
+   auxGrid._serie := cds_divergenteNUM_SERIE.AsString;
+   auxGrid._dtaHoraAlteracao := cds_divergenteDTA_HOR_CADASTRO_INVENT.AsDateTime;
+
+   if auxGrid._seqInventarioPatrimonio <= 0 then
+   begin
+      Application.MessageBox('Não há nenhum inventário aberto neste momento para ser realizado', 'Validação', MB_ICONWARNING);
+      Exit;
+   end;
+
+   auxGrid._seqInventarioPatrimonioLocal := ObterInventarioPatrimonioLocal(auxGrid);
+   l_estado_inventario := IniciarInventarioParaLocal(auxGrid);
+
+   {Reatribuição necessária pois o método inventário local pode ter falhado, por já ter um inventário em andamento e a sequencia do inventário local terá um novo estado...
+    Geralmente irá falhar, pois sempre terá um inventário em andamento mas existe o risco de não ter...}
+   if not (l_estado_inventario = -1) then
+      auxGrid._seqInventarioPatrimonioLocal := l_estado_inventario;
+
+   qryInventario := PesquisarCentroCustoBemPatrimonial(auxGrid);
+
+   {Query necessária para localizar patrimônios antigos e fazer as operações DML abaixo...}
+   with qryInventario do
+   begin
+      if Active then Close;
+      try
+        Open;
+      except on E : Exception do
+          raise Exception.Create('Erro ao pesquisar dados do centro de custo bem patrimonial' + sLineBreak + E.Message);
+      end;
+   end;
+
+   if PatrimonioJaInventariado(auxGrid) then Exit;
+   If PatrimonioJaInventariadoNumeroTrocado(auxGrid) Then Exit;
+   
+   qryAtivo := PesquisarDadosPatrimonio(auxGrid);
+
+   with qryAtivo do
+   begin
+      if Active then Close;
+      try
+         Open;
+         if Active and (not IsEmpty) then
+          begin
+            if not FieldByName('DTA_DESINCORPORACAO').IsNull then
+               Application.MessageBox('Patrimônio informado já foi baixado no sistema', 'Validação', MB_ICONWARNING);
+          end;
+      except on E : Exception do
+        raise Exception.Create('Erro ao pesquisar dados do patrimônio' + sLineBreak + E.Message);
+      end;
+   end;
+
+   If Not (qryInventario.Locate('COD_TIPO_PATRIMONIO;NUM_PATRIMONIO;COD_CENCUSTO;COD_LOCALIZACAO',
+                                VarArrayOf([qryAtivo.FieldByName('COD_TIPO_PATRIMONIO').AsInteger,
+                                            qryAtivo.FieldByName('NUM_PATRIMONIO').AsInteger,
+                                            auxGrid._codCentroCusto, auxGrid._codLocalizacao]), [])) Then
+   begin
+        try
+           TBancoDeDadosOracleHC.IniciarTransacaoBDE;
+
+               AtualizarNumeracaoTipoPatrimonio(auxGrid);
+               RetirarPatrimonioCentroCustoAnterior(auxGrid);
+               InserirCentroCustoBemPatrimonial(auxGrid);
+               AtualizarDadosBemPatrimonial(auxGrid);
+               AtualizarOuRemoverItensInventarioOffline(q_integracao);
+
+           TBancoDeDadosOracleHC.ConfirmarTransacaoBDE;
+
+           Result := True;
+          Except On E: Exception Do
+          Begin
+            TBancoDeDadosOracleHC.CancelarTransacaoBDE;
+            Application.MessageBox(PChar(E.Message), 'Erro', MB_ICONERROR);
+          End;
+        End;
+   end;
+end;
+ {................................................................................}
+
+{$REGION 'Métodos Auxiliares'}
+procedure TfrmInventarioOffline.ValidarPermissaoConsolidarInvOffline(Sender: TObject; Qry: TQuery);
+begin
+   if (Sender As TComboBox).ItemIndex = 4 then
+     im_consolidar_inventario.Visible := True
+   else
+     im_consolidar_inventario.Visible := False;
+
+   TrechoCombo(Qry);
+   PintarColunasGrid((Sender As TComboBox).ItemIndex);
+end;
+
+procedure TfrmInventarioOffline.TrechoCombo(Qry: TQuery);
+begin
+     LimparCamposEObjetosBanco;
+     q_middleware.SQL.Clear;
+     q_middleware.SQL.Text := Qry.SQL.Text;
+
+    if ds_divergente.State in [dsBrowse] then
+       cds_divergente.Close;
+
+    cds_divergente.Open;
+end;
+
+procedure TfrmInventarioOffline.LimparCamposEObjetosBanco;
+var i : Integer;
+begin
+     for I := 0 to self.ComponentCount - 1 do
+     begin
+        if self.Components[i] is TEdit then
+            TEdit(self.Components[i]).Text := EmptyStr;
+
+        if self.Components[i] is TQuery then
+           TQuery(self.Components[i]).Close;
+
+        if self.Components[i] is TDBLookupComboBox then
+           TDBLookupComboBox(self.Components[i]).Width := MIN_WIDTH;
+     end;
+
+    gbl_COD_TIPO_PATRIMONIO := EmptyStr;
+    gbl_NOM_CENCUSTO := EmptyStr;
+    gbl_COD_LOCALIZACAO := EmptyStr;
+    gbl_COD_TIPO_PATRIMONIO_NOVO := EmptyStr;
+end;
+
+function TfrmInventarioOffline.CamposValidos: Boolean;
+var
+ i : Integer;
+begin
+   for I := 0 to self.ComponentCount - 1 do
+   begin
+      if self.Components[i] is TEdit then
+      begin
+          if (ValorVazio(TEdit(self.Components[i]).Text))  then
+          begin
+             if TEdit(self.Components[i]).Name = 'edtSearch' then
+                Continue;
+
+             ShowMessage('Campo não pode ser vazio...');
+             TEdit(self.Components[i]).SetFocus;
+             CamposValidos := False;
+             Exit;
+          end;
+      end;
+   end;
+   CamposValidos := True;
+end;
+
+procedure  TfrmInventarioOffline.PintarColunasGrid(index: Integer);
+var
+   i: Integer;
+begin
+   with DBGrid1 do
+    begin
+         case index of
+             1: begin
+                     for i := 0 to Columns.Count - 1 do
+                     begin
+                         Columns[0].Color := clMoneyGreen;
+                         Columns[7].Color := clWhite;
+                     end;
+                end;
+
+             2: begin
+                   for i := 0 to Columns.Count - 1 do
+                     begin
+                         Columns[0].Color := clWhite;
+                         Columns[7].Color := clMoneyGreen;
+                     end
+                end;
+             else
+             begin
+                 for i := 0 to Columns.Count - 1 do
+                 begin
+                     Columns[0].Color := clWhite;
+                     Columns[7].Color := clWhite;
+                 end
+             end;
+         end;
+    end;
+end;
+{$ENDREGION}
+end.

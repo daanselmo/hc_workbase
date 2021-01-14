@@ -1,0 +1,108 @@
+SELECT * FROM licitacao l
+WHERE l.num_documento = 9410
+AND l.ano_documento = 2017;
+
+/*Fornecedores ganhadores*/
+SELECT pfp.* FROM preco_fornecedor_pedido PFP 
+       JOIN pedido_compra pc ON pfp.num_pedido_compra = pc.num_pedido_compra
+                                        AND pfp.ano_pedido_compra = pc.ano_pedido_compra
+                                        AND pfp.idf_classificacao = '1'
+WHERE pc.num_agrupamento = 290395;
+-----------------------------------
+
+SELECT pc.num_seq_agrupamento,pc.* FROM pedido_compra pc
+WHERE pc.num_agrupamento = 281802;
+-------------------------------------
+SELECT LISTAGG(PC.NUM_SEQ_AGRUPAMENTO,', ') WITHIN GROUP(ORDER BY PC.NUM_SEQ_AGRUPAMENTO) num_seq_agrupamento, 
+ f.nom_fornecedor 
+ FROM PRECO_FORNECEDOR_PEDIDO PFP 
+ JOIN PEDIDO_COMPRA PC 
+ ON PFP.NUM_PEDIDO_COMPRA = PC.NUM_PEDIDO_COMPRA 
+ AND PFP.ANO_PEDIDO_COMPRA = PC.ANO_PEDIDO_COMPRA  
+   JOIN fornecedor f   
+  ON pfp.cod_fornecedor = f.cod_fornecedor 
+ WHERE PC.NUM_AGRUPAMENTO = 291872
+  AND pfp.idf_classificacao = '1' 
+ GROUP BY PFP.COD_FORNECEDOR, F.NOM_FORNECEDOR 
+ORDER BY nom_fornecedor, num_seq_agrupamento DESC ;
+------------------------------------------
+
+SELECT PC.NUM_SEQ_AGRUPAMENTO,
+       pc.cod_material,     
+      f.nom_fornecedor 
+ FROM PRECO_FORNECEDOR_PEDIDO PFP 
+  JOIN PEDIDO_COMPRA PC 
+ ON PFP.NUM_PEDIDO_COMPRA = PC.NUM_PEDIDO_COMPRA 
+ AND PFP.ANO_PEDIDO_COMPRA = PC.ANO_PEDIDO_COMPRA  
+   JOIN fornecedor f   
+  ON pfp.cod_fornecedor = f.cod_fornecedor 
+ WHERE PC.NUM_AGRUPAMENTO = 281802
+  AND pfp.idf_classificacao = '1' 
+ --GROUP BY PFP.COD_FORNECEDOR, F.NOM_FORNECEDOR 
+ORDER BY nom_fornecedor DESC ;
+
+--
+SELECT PFP.*
+  FROM PRECO_FORNECEDOR_PEDIDO PFP
+  JOIN PEDIDO_COMPRA PC
+    ON PFP.NUM_PEDIDO_COMPRA = PC.NUM_PEDIDO_COMPRA
+   AND PFP.ANO_PEDIDO_COMPRA = PC.ANO_PEDIDO_COMPRA
+   AND PFP.IDF_CLASSIFICACAO = '1'
+  JOIN ESTOQUE.ITENS_AUTORIZACAO_ENTREGA IAE
+    ON IAE.NUM_PEDIDO_COMPRA = PFP.NUM_PEDIDO_COMPRA
+   AND IAE.ANO_PEDIDO_COMPRA = PFP.ANO_PEDIDO_COMPRA
+   AND IAE.NUM_ITEM_COTACAO = PFP.NUM_ITEM_COTACAO
+ WHERE PC.NUM_AGRUPAMENTO = 290395;
+
+select * from ESTOQUE.ITENS_AUTORIZACAO_ENTREGA t
+where t.num_pedido_compra = :m_num_pedido_compra
+and   t.ano_pedido_compra = :m_ano_pedido_compra
+and   t.num_item_cotacao = :m_num_item_cotacao
+--5410127X
+/*Contratos de compras*/
+SELECT *
+  FROM ESTOQUE.AUTORIZACAO_COMPRA_MATERIAL T
+  JOIN (SELECT PC.NUM_AGRUPAMENTO, PC.NUM_PEDIDO_COMPRA, PC.ANO_PEDIDO_COMPRA
+          FROM PEDIDO_COMPRA PC
+          JOIN PRECO_FORNECEDOR_PEDIDO PFP
+            ON PFP.NUM_PEDIDO_COMPRA = PC.NUM_PEDIDO_COMPRA
+           AND PFP.ANO_PEDIDO_COMPRA = PC.ANO_PEDIDO_COMPRA
+           AND PFP.IDF_CLASSIFICACAO = '1' ) PED_VENC
+    ON T.NUM_PEDIDO_COMPRA = PED_VENC.NUM_PEDIDO_COMPRA
+   AND T.ANO_PEDIDO_COMPRA = PED_VENC.ANO_PEDIDO_COMPRA
+   WHERE  PED_VENC.NUM_AGRUPAMENTO = 290395;
+    
+
+/*Registro de preços*/
+SELECT T.NUM_SUGESTAO_COMPRA,
+       T.NUM_AUTORIZACAO_COMPRA,
+       T.COD_CENCUSTO,
+       T.COD_MATERIAL,
+       T.IDF_STATUS_SUGESTAO,
+       T.QTD_SUGERIDA,
+       T.QTD_COMPRAR,
+       T.IDF_ESTAGIO_SUGESTAO_EMPENHO,
+       T.COD_INST_SISTEMA,
+       CONT_COMPRAS.NUM_PEDIDO_COMPRA,
+       CONT_COMPRAS.ANO_PEDIDO_COMPRA
+  FROM ESTOQUE.SUGESTAO_COMPRA T
+  JOIN (SELECT T.NUM_AUTORIZACAO_COMPRA,
+               PED_VENC.NUM_PEDIDO_COMPRA,
+               PED_VENC.ANO_PEDIDO_COMPRA
+          FROM ESTOQUE.AUTORIZACAO_COMPRA_MATERIAL T
+          JOIN (SELECT PC.NUM_PEDIDO_COMPRA, PC.ANO_PEDIDO_COMPRA
+                 FROM PEDIDO_COMPRA PC
+                 JOIN PRECO_FORNECEDOR_PEDIDO PFP
+                   ON PFP.NUM_PEDIDO_COMPRA = PC.NUM_PEDIDO_COMPRA
+                  AND PFP.ANO_PEDIDO_COMPRA = PC.ANO_PEDIDO_COMPRA
+                  AND PFP.IDF_CLASSIFICACAO = '1'
+                WHERE PC.NUM_AGRUPAMENTO = 290395) PED_VENC
+            ON T.NUM_PEDIDO_COMPRA = PED_VENC.NUM_PEDIDO_COMPRA
+           AND T.ANO_PEDIDO_COMPRA = PED_VENC.ANO_PEDIDO_COMPRA) CONT_COMPRAS
+    ON T.NUM_AUTORIZACAO_COMPRA = CONT_COMPRAS.NUM_AUTORIZACAO_COMPRA;
+    
+SELECT * FROM SUGESTAO_COMPRA SC;
+
+/*Itens faturados*/
+select * from ESTOQUE.ITENS_AUTORIZACAO_ENTREGA t
+where t.num_sugestao_compra = 840722;
