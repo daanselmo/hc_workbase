@@ -1,0 +1,1 @@
+v_dsc_obs := v_dsc_basica +chr(13) + m_dsc_servico.Text; 
