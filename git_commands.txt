@@ -31,7 +31,7 @@ git config --global user.emal "daanselmo@hcrp.usp.br"
 
 #Push files to Master
   git remote add origin https://github.com/daanselmo/hc_workbase.git
-  git push -u origen master
+  git push -u origin master
 
 #Get last update from the project
  git pull
